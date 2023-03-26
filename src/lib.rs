@@ -15,7 +15,7 @@ use std::{
 pgx::pg_module_magic!();
 
 #[pg_extern]
-fn hello_my_extension(input: &str) -> String {
+fn gpt(input: &str) -> String {
   let rt = Runtime::new().unwrap();
   set_key(env::var("OPENAI_KEY").unwrap());
   let query = "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;";

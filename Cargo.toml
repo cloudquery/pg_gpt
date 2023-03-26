@@ -1,5 +1,5 @@
 [package]
-name = "pggpt"
+name = "pg_gpt"
 version = "0.0.0"
 edition = "2021"
 

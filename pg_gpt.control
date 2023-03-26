@@ -1,5 +1,5 @@
-comment = 'pggpt:  Created by pgx'
+comment = 'pg_gpt:  Created by pgx'
 default_version = '@CARGO_VERSION@'
-module_pathname = '$libdir/pggpt'
+module_pathname = '$libdir/pg_gpt'
 relocatable = false
 superuser = true
