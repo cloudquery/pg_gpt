@@ -1,0 +1,5 @@
+comment = 'pggpt:  Created by pgx'
+default_version = '@CARGO_VERSION@'
+module_pathname = '$libdir/pggpt'
+relocatable = false
+superuser = true
