@@ -16,15 +16,18 @@ pgx::pg_module_magic!();
 
 #[pg_extern]
 fn gpt(input: &str) -> String {
+  match env::var("OPENAI_KEY") {
+    Ok(val) => set_key(val),
+    Err(e) => println!("Couldn't interpret {}: {}", "OPENAI_KEY", e),
+  }
   let rt = Runtime::new().unwrap();
-  set_key(env::var("OPENAI_KEY").unwrap());
   let query = "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;";
 
   let schema: Result<
   TableIterator<
       'static,
       (
-          name!(oid, Result<Option<String>, pgx::spi::Error>),
+          name!(table_name, Result<Option<String>, pgx::spi::Error>),
           name!(name, Result<Option<String>, pgx::spi::Error>),
       ),
   >,
@@ -48,7 +51,7 @@ fn gpt(input: &str) -> String {
 
   let mut messages = vec![ChatCompletionMessage {
     role: ChatCompletionMessageRole::System,
-    content: "You are an SQL assistent and you will return raw PostgreSQL queries without any additional words ready to execute".to_string(),
+    content: "You are an SQL assistent and you will return raw PostgreSQL queries without any additional words ready to execute in one line".to_string(),
     name: None,
   }];
   messages.push(ChatCompletionMessage {
@@ -81,8 +84,8 @@ mod tests {
     use pgx::prelude::*;
 
     #[pg_test]
-    fn test_hello_my_extension() {
-        assert_eq!("Hello, my_extension", crate::hello_my_extension("show me all aws s3 buckets"));
+    fn test_gpt() {
+        assert_eq!("Hello, my_extension", crate::gpt("show me all aws s3 buckets"));
     }
 
 }
