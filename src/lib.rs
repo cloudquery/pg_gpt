@@ -1,4 +1,4 @@
-use pgx::prelude::*;
+use pgx::{prelude::*, JsonString};
 use tokio::runtime::Runtime;
 use pgx::{spi};
 use std::collections::HashMap;
@@ -20,48 +20,39 @@ fn gpt(input: &str) -> String {
     Ok(val) => set_key(val),
     Err(e) => println!("Couldn't interpret {}: {}", "OPENAI_KEY", e),
   }
+
+  let schema_sql = "SELECT json_object_agg(table_name, columns)::text
+  FROM (
+    SELECT table_name, json_agg(column_name) AS columns
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+    GROUP BY table_name
+  ) subquery;";
+
+
   let rt = Runtime::new().unwrap();
-  let query = "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;";
-
-  let schema: Result<
-  TableIterator<
-      'static,
-      (
-          name!(table_name, Result<Option<String>, pgx::spi::Error>),
-          name!(name, Result<Option<String>, pgx::spi::Error>),
-      ),
-  >,
-  spi::Error,
-> = Spi::connect(|client| {
-    Ok(client.select(query, None, None)?.map(|row| (row["table_name"].value(), row["column_name"].value())))
-  })
-  .map(|results| TableIterator::new(results));
-
-  let mut schema_str = String::new();
-  let tables: HashMap<String, Vec<String>> = HashMap::new();
-  for value in schema.unwrap() {
-    let table_name = value.0.unwrap().unwrap_or_else(|| "".to_owned());
-    let column_name = value.1.unwrap().unwrap_or_else(|| "".to_owned());
-    if !tables.contains_key(table_name.as_str()) {
-      schema_str.push_str(&format!("){}(", table_name));
-    } else {
-      schema_str.push_str(&format!("{},", column_name));
-    }
+  // let mut schema = String::new();
+  let schema: Result<Option<String>, pgx::spi::Error> = Spi::get_one(schema_sql);
+  if schema.is_err() {
+    return format!("Error: {}", schema.err().unwrap());
+  }
+  if schema.as_ref().unwrap().is_none() {
+    return format!("Error: {}", "No result");
   }
 
   let mut messages = vec![ChatCompletionMessage {
     role: ChatCompletionMessageRole::System,
-    content: "You are an SQL assistent and you will return raw PostgreSQL queries without any additional words ready to execute in one line".to_string(),
+    content: "You are an SQL assistent that helps translate questions into SQL".to_string(),
     name: None,
   }];
   messages.push(ChatCompletionMessage {
     role: ChatCompletionMessageRole::User,
-    content: format!("Here is the schema: {}", schema_str),
+    content: format!("Here is a schema for the database in json format: {}", schema.unwrap().unwrap()),
     name: None,
   });
   messages.push(ChatCompletionMessage {
     role: ChatCompletionMessageRole::User,
-    content: format!("Here is the question: {}", input),
+    content: format!("Please return an SQL statement as a single string for the following question: {}", input),
     name: None,
   });
 
