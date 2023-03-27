@@ -1,6 +1,6 @@
 # Postgres GPT
 
-Postgres GPT is an Eeperimental PostgreSQL extension that enables use of OpenAI GPT API inside PostgreSQL. This allows you to generate SQL queries from natural language.
+Postgres GPT is an Experimental PostgreSQL extension that enables use of OpenAI GPT API inside PostgreSQL. This allows you to generate SQL queries from natural language.
 
 **Note**: This plugins sends schema (without the data) to OpenAI GPT API, so it is not recommended to use it on production databases.
 **Note**: This is an experimental plugin and not officially supported by CloudQuery.
