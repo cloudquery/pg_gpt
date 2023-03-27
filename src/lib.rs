@@ -76,9 +76,17 @@ mod tests {
 
     #[pg_test]
     fn test_gpt() {
-        assert_eq!("Hello, my_extension", crate::gpt("show me all aws s3 buckets"));
+      extension_sql!(
+    r#"
+CREATE TABLE examples (
+    id serial8 not null primary key,
+    title text
+);
+"#,
+    name = "create_example_table",
+);
+      assert_eq!("SELECT title FROM examples;", crate::gpt("list all example titles"));
     }
-
 }
 
 /// This module is required by `cargo pgx test` invocations. 
