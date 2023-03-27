@@ -21,42 +21,75 @@ fn gpt(input: &str) -> String {
     Err(e) => println!("Couldn't interpret {}: {}", "OPENAI_KEY", e),
   }
   let rt = Runtime::new().unwrap();
-  let query = "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;";
+  println!("sending tables query");
 
+  let query = "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;";
+  println!("Before query execution");
   let schema: Result<
-  TableIterator<
+    TableIterator<
       'static,
       (
-          name!(table_name, Result<Option<String>, pgx::spi::Error>),
-          name!(name, Result<Option<String>, pgx::spi::Error>),
+        name!(table_name, Result<Option<String>, pgx::spi::Error>),
+        name!(column_name, Result<Option<String>, pgx::spi::Error>),
       ),
-  >,
-  spi::Error,
-> = Spi::connect(|client| {
+    >,
+    spi::Error,
+  > = Spi::connect(|client| {
     Ok(client.select(query, None, None)?.map(|row| (row["table_name"].value(), row["column_name"].value())))
   })
-  .map(|results| TableIterator::new(results));
+    .map(|results| {
+      TableIterator::new(results)
+    });
+  println!("After query execution");
 
   let mut schema_str = String::new();
   let tables: HashMap<String, Vec<String>> = HashMap::new();
-  for value in schema.unwrap() {
-    let table_name = value.0.unwrap().unwrap_or_else(|| "".to_owned());
-    let column_name = value.1.unwrap().unwrap_or_else(|| "".to_owned());
-    if !tables.contains_key(table_name.as_str()) {
-      schema_str.push_str(&format!("){}(", table_name));
-    } else {
-      schema_str.push_str(&format!("{},", column_name));
+  println!("got schema");
+
+  if schema.is_err() {
+    println!("schema is error");
+    return "Error".to_string();
+  }
+  println!("getting tables");
+
+  match schema {
+    Ok(iter_result) => {
+      println!("OK got iter_result");
+      for (table_name_result, column_name_result) in iter_result {
+        println!("OK inside for loop");
+        if table_name_result.is_err() || column_name_result.is_err() {
+          println!("got error");
+          return "Error".to_string();
+        }
+        let table_name = table_name_result.unwrap().unwrap_or_else(|| "".to_owned());
+        let column_name = column_name_result.unwrap().unwrap_or_else(|| "".to_owned());
+        println!("table_name: {}", table_name.as_str());
+        println!("column_name: {}", column_name.as_str());
+        if !tables.contains_key(table_name.as_str()) {
+          schema_str.push_str(&format!("{}(", table_name.as_str()));
+        }
+        schema_str.push_str(&format!("{},", column_name.as_str()));
+      }
+      println!("done with loop");
+      schema_str.push_str(")");
+      println!("done with loop");
+    }
+    Err(e) => {
+      println!("Error: {}", e);
+      return "Error".to_string();
     }
   }
 
+  println!("schema: {}", schema_str.as_str());
+
   let mut messages = vec![ChatCompletionMessage {
     role: ChatCompletionMessageRole::System,
-    content: "You are an SQL assistent and you will return raw PostgreSQL queries without any additional words ready to execute in one line".to_string(),
+    content: "You are a SQL assistant and you will return raw PostgreSQL queries without any additional words ready to execute in one line".to_string(),
     name: None,
   }];
   messages.push(ChatCompletionMessage {
     role: ChatCompletionMessageRole::User,
-    content: format!("Here is the schema: {}", schema_str),
+    content: format!("Here is the schema: {}", schema_str.as_str()),
     name: None,
   });
   messages.push(ChatCompletionMessage {
@@ -85,9 +118,17 @@ mod tests {
 
     #[pg_test]
     fn test_gpt() {
-        assert_eq!("Hello, my_extension", crate::gpt("show me all aws s3 buckets"));
+        extension_sql!(
+    r#"
+CREATE TABLE examples (
+    id serial8 not null primary key,
+    title text
+);
+"#,
+    name = "create_example_table",
+);
+      assert_eq!("SELECT title FROM examples;", crate::gpt("list all example titles"));
     }
-
 }
 
 /// This module is required by `cargo pgx test` invocations. 
