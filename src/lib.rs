@@ -1,7 +1,5 @@
-use pgx::{prelude::*, JsonString};
+use pgx::{prelude::*};
 use tokio::runtime::Runtime;
-use pgx::{spi};
-use std::collections::HashMap;
 
 use openai::{
   chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
