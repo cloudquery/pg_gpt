@@ -1,4 +1,4 @@
-# pg_gpt
+# Postgres <> ChatGPT
 
 Experimental PostgreSQL extension that enables the use of OpenAI GPT API inside PostgreSQL, allowing for queries to be written using natural language.
 
