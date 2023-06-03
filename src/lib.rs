@@ -39,7 +39,7 @@ fn gpt_tables(table_pattern: &str, input: &str) -> String {
   FROM (
     SELECT table_name, json_object_agg(column_name, data_type) AS columns
     FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name LIKE '{}' AND table_name NOT LIKE '_pg%'
+    WHERE table_schema = 'public' AND table_name SIMILAR TO '{}' AND table_name NOT LIKE '_pg%'
     GROUP BY table_name
   ) subquery;", table_pattern);
 
@@ -60,7 +60,7 @@ fn gpt_tables(table_pattern: &str, input: &str) -> String {
   FROM (
     SELECT table_name, json_agg(column_name) AS columns
     FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name LIKE '{}' AND table_name NOT LIKE '_pg%'
+    WHERE table_schema = 'public' AND table_name SIMILAR TO '{}' AND table_name NOT LIKE '_pg%'
     GROUP BY table_name
   ) subquery;", table_pattern);
 
